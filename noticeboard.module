@@ -1,0 +1,214 @@
+<?php
+
+
+
+/**
+ * Implementation of hook_block_info().
+ */
+function noticeboard_block_info() {
+  $blocks = array();
+
+  $blocks['noticeboard'] = array(
+      'info' => t('Scrolling Noticeboard'),
+      'cache' => DRUPAL_CACHE_GLOBAL,
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implementation of hook_block_view().
+ */
+function noticeboard_block_view($delta = '') {
+  $block = array();
+
+  if ($delta == 'noticeboard') {
+    $block['content'] = theme('noticeboard_scroller');
+  }
+
+  return $block;
+}
+
+/**
+ * Implementation of hook_block_configure().
+ */
+function noticeboard_block_configure($delta = '') {
+  $form = array();
+
+  if ($delta == 'noticeboard') {
+    $speed_options = array();
+    $speed_options['1'] = t('Very Slow');
+    $speed_options['2'] = t('Slow');
+    $speed_options['3'] = t('Medium');
+    $speed_options['4'] = t('Fast');
+    $speed_options['5'] = t('Very Fast');
+
+    $scroll_directions = array();
+    $scroll_directions['left'] = t('Left');
+    $scroll_directions['up'] = t('Up');
+
+    $scroll_behaviors = array();
+    $scroll_behaviors['scroll'] = t('Scroll');
+    $scroll_behaviors['slide'] = t('Slide');
+    $scroll_behaviors['alternate'] = t('Alternate');
+/*
+    $scroll_color = array();
+    $scroll_color['yellow'] = t('yellow');
+    $scroll_color['blue'] = t('blue');
+    $scroll_color['gray'] = t('gray');
+
+
+    $form['noticeboard_message'] = array(
+        '#type' => 'textarea',
+        '#title' => t('Scrolling Message'),
+        '#description' => t('Enter your scrolling message here.  HTML tags are allowed.'),
+        '#default_value' => variable_get('noticeboard_message', ''),
+    );
+*/
+
+    $form['noticeboard_scroll_speed'] = array(
+        '#type' => 'select',
+        '#title' => t('Scroll Speed'),
+        '#options' => $speed_options,
+        '#default_value' => variable_get('noticeboard_scroll_speed', 3),
+    );
+
+    $form['noticeboard_scroll_direction'] = array(
+        '#type' => 'radios',
+        '#title' => t('Scroll Direction'),
+        '#options' => $scroll_directions,
+        '#default_value' => variable_get('noticeboard_scroll_direction', 'left'),
+    );
+
+    $form['noticeboard_scroll_behavior'] = array(
+        '#type' => 'radios',
+        '#title' => t('Scroll Behavior'),
+        '#options' => $scroll_behaviors,
+        '#default_value' => variable_get('noticeboard_scroll_behavior', 'scroll'),
+    );
+    $form['noticeboard_scroll_color'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Scroll color'),
+        '#description' => t('Enter the noticeboard background color - example #FAF281'),
+        '#default_value' => variable_get('noticeboard_scroll_color', '#FAF281'),
+    );
+    $form['noticeboard_scroll_text_color'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Scroll Text color'),
+	'#description' => t('Enter the text color here - example #000000'),
+        '#default_value' => variable_get('noticeboard_scroll_text_color', '#000000'),
+    );
+
+
+  }
+
+  return $form;
+}
+
+/**
+ * Implementation of hook_block_save().
+ */
+function noticeboard_block_save($delta = '', $edit = array()) {
+  if ($delta == 'noticeboard') {
+    variable_set('noticeboard_scroll_speed', $edit['noticeboard_scroll_speed']);
+    variable_set('noticeboard_scroll_direction', $edit['noticeboard_scroll_direction']);
+    variable_set('noticeboard_scroll_behavior', $edit['noticeboard_scroll_behavior']);
+    variable_set('noticeboard_scroll_color', $edit['noticeboard_scroll_color']);
+    variable_set('noticeboard_scroll_text_color', $edit['noticeboard_scroll_text_color']);
+    drupal_set_message('Your marquee settings have been saved.');
+  }
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function noticeboard_theme() {
+  $items = array();
+
+  $items['noticeboard_scroller'] = array();
+
+  return $items;
+}
+
+function theme_noticeboard_scroller() {
+  $path = drupal_get_path('module', 'noticeboard');
+  drupal_add_css($path . '/noticeboard.css');
+drupal_add_js($path . '/noticeboard.js');
+//drupal_add_js('jQuery(document).ready(function () {   $('.vticker').easyTicker({alert("Hello11!");  });   });', array('type' => 'inline'));
+// $('.vticker').easyTicker({alert("Hello!");  });
+  drupal_add_js('var $ = jQuery;', 'inline');
+  drupal_add_js($path . '/jquery.easing.min.js');
+  drupal_add_js($path . '/jquery.easy-ticker.js');
+
+
+// drupal_add_js(array('noticeboard' => array('tax_rate' => '0.06')), 'setting');
+
+
+  
+//  drupal_add_js($path . '/noticeboard.js');
+
+$messages=array();
+$latest_notices = views_get_view('cust_noticeboard');
+$latest_notices->render();
+
+for ($i=0;$i<count($latest_notices->result);$i++) 
+{
+	$DESC = $latest_notices->result[$i]->_field_data['nid']['entity']->body['und']['0']['value'];
+	$TEASOR = substr($DESC, 0, 50);
+	$NID =$latest_notices->result[$i]->_field_data['nid']['entity']->nid;
+	$path="?q=" . drupal_get_path_alias('node/'.$NID);
+	$READMORE_LINK = "<a href='" . $path . "'>Read More... </a>";
+	$TITLE =  $latest_notices->result[$i]->node_title;
+
+	$arr1 = array(title=>$TITLE, teasor=>$TEASOR, readmore=>$READMORE_LINK);
+	array_push($messages,$arr1); 
+}
+
+  $speed = variable_get('noticeboard_scroll_speed', 3);
+  $direction = variable_get('noticeboard_scroll_direction', 'left');
+  $behavior = variable_get('noticeboard_scroll_direction', 'scroll');
+  $bgcolor = variable_get('noticeboard_scroll_color', '#FAF281');
+  $textcolor= variable_get('noticeboard_scroll_text_color', '#000000');
+  $style=" style='background:$bgcolor;color:$textcolor;'";
+	
+/*
+  $output = '';
+  $output .= '<div class="pin"></div>';
+  $output .= '<div class="notice-container note box"' .  $style . '> <ul class ="slide">';
+  foreach ($messages as $message) 
+  {
+//    echo $message['readmore'];
+    $output .= '<BR><li><div class="notice-teaser"><h3><p class="notice-header">' . $message['title'] . '</p></h3>';
+    $output .= '<p>' . $message["teasor"] . '</p><BR>';
+    $output .= '<p style="text-align:right;">' . $message["readmore"] . '</p></div></li>' ;
+  }
+  $output .= '</ul></div></div>';
+  return $output;
+  
+  */
+  
+  $output = '';
+  $output .= '<div class="pin"></div>';
+//    $output .= '<div class="up"></div>';
+  $output .= '<div class="vticker"> <ul>';
+    /*
+    $output .= '<li>line 1</li>';
+    $output .= '<li>line 1</li>';
+    $output .= '<li>line 1</li>';
+  
+  */
+ 
+  foreach ($messages as $message) 
+  {
+//    echo $message['readmore'];
+    $output .= '<li><div><h3>' . $message['title'] . '</h3>';
+    $output .= '<p>' . $message["teasor"] . '</p>';
+    $output .= '<p style="text-align:right;">' . $message["readmore"] . '</p></div></li>' ;
+  }
+  
+  $output .= '</ul></div>';
+//  $output .= '<div class="down"></div>';
+  return $output;
+
+	
+}
